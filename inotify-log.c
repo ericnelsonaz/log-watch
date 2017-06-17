@@ -173,7 +173,7 @@ static void read_callback(struct inotify_log_t *watcher)
 	char inbuf[2048];
 	ssize_t numread;
 	while (0 < (numread = read(watcher->fdlog, inbuf, sizeof(inbuf)))) {
-		printf("read %ld:", numread);
+		printf("read %zd:", numread);
 		fwrite(inbuf, 1, numread, stdout);
 		printf("\n");
 		fflush(stdout);
