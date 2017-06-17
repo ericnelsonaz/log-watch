@@ -1,0 +1,74 @@
+Possible enhancements:
+======================
+
+Allow multiple patterns and actions:
+------------------------------------
+My current thinking is to specify a set of directories with a set of files
+with patterns and actions on the command-line.
+
+Each pat-act file in the directories could contain pairs of pattern and
+action that are easy to parse:
+
+i.e.:
+	~/$ cat > ~/log-watch.d/20-my-rule << EOF
+	PATTERN=blah
+	ACTION=fixup blah blah
+	EOF
+	~/$ log-watch /var/log/syslog ~/log-watch.d/
+
+Implementation will require that at least the boyer_moore_context field
+in the log_watch_t structure be changed to a linked list or array.
+
+Re-structure the event reading and processing:
+----------------------------------------------
+
+The current flow of the log file reading is more or less as follows:
+
+	read a set of inotify events
+	for each event
+		read all updates from log file (read_callback)
+
+This presents two potential problems.
+
+The first is that in a heavily loaded system (one that generates a
+lot of log spew), it's likely that we'll receive multiple inotify
+events at once, and the read_callback will process data that was
+flagged by multiple inotify events and follow-up calls to the
+read_callback routine will issue read() calls that don't produce
+any data.
+
+In other words, the current structure may issue more system calls
+than necessary.
+
+My thinking about how to address this is to re-work the inotify
+interface to just return an indicator of which events have occurred
+and use this to drive a timeout in the outer "poll()" loop and only
+read from the log file during timeouts.
+
+I haven't seen this issue in practice.
+
+The second potential issue is also related to the timing of reads
+from the log file.
+
+Because we're using non-blocking reads, it is possible that the
+read() calls inside the read callback could be filled in small
+chunks and fail
+
+For instance, if we log this pattern to syslog:
+
+	~/$ logger "this is an interesting pattern"
+
+It is theoretically possible that the reads inside the callback are
+filled in the following way:
+
+	read "this is"
+	read " an interesting"
+	read " pattern"
+
+If this were to occur, we wouldn't match the string, because the
+Boyer-Moore implementation uses double-buffering, and no two buffers
+contain the entire string.
+
+This is also an unlikely event, and the addition of a timeout to
+the poll() loop would address it.
+
