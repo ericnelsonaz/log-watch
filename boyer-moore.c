@@ -1,3 +1,7 @@
+/*
+ * Copyright (C) 2017  Nelson Integration, LLC
+ */
+
 #include "boyer-moore.h"
 #include <stdio.h>
 #include <string.h>

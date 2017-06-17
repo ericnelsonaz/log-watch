@@ -14,6 +14,7 @@
  * Note that the maximum size of the "needle" is defined by the amount
  * of data read in two reads (the sum of the lengths of head and tail).
  *
+ * Copyright (C) 2017  Nelson Integration, LLC
  */
 
 struct boyer_moore_context {

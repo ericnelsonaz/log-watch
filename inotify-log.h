@@ -21,7 +21,10 @@
  * When done, the inotify_log_cleanup routine should be used
  * to free resources.
  *
+ *
+ * Copyright (C) 2017  Nelson Integration, LLC
  */
+
 enum inotify_log_state_e {
 	INLOG_DIR_NOFILE,
 	INLOG_DIR_AND_FILE

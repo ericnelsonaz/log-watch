@@ -1,3 +1,7 @@
+/*
+ * Copyright (C) 2017  Nelson Integration, LLC
+ */
+
 #include "inotify-log.h"
 #include <errno.h>
 #include <fcntl.h>
