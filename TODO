@@ -72,3 +72,7 @@ contain the entire string.
 This is also an unlikely event, and the addition of a timeout to
 the poll() loop would address it.
 
+On the other hand, replacing the double-buffered scheme in the
+boyer-moore.c module with a circular buffer would probably be
+simpler, improve cache locality, and ensure that any string up
+to "bufsize - 1" would be matched.
