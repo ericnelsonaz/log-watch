@@ -1,0 +1,84 @@
+log-watch: A simple program to watch for strings in a log file (syslog) and
+perform an action on each match.
+
+This program is designed to efficiently watch for exact strings in a file
+such as /var/log/syslog and execute a command if/when found.
+
+Usage:
+======
+Usage is entirely driven by the command-line with three arguments:
+1. the pattern to look for
+2. the command to execute upon match
+3. the log file to watch
+
+For example, this will just echo to stdout when the pattern "look for this"
+is found:
+
+~/$ cat > corrective-action << EOF
+#!/bin/sh
+echo "found pattern, take corrective action here"
+EOF
+~/$ chmod a+x ./corrective-action
+~/$ log-watch "look for this" ./corrective-action /var/log/syslog &
+[1] 29752
+~/$ logger "look for this"
+found pattern, take corrective action here
+
+Bursty messages:
+================
+Note that because the corrective action command may take a while to
+execute, log-watch will only start the program if a previous invocation
+has exited but will continue to read from the log file. In other words,
+if the message being matched is generated in bursts, the corrective-action
+may be executed fewer times than the number of occurrences within the
+log file.
+
+This is a feature, not a bug, as many types of errors (kernel driver
+issues) are bursty, and the error may appear while the corrective action
+is being performed. If this is the case, you may want to include a
+call to sleep() inside your corrective action command.
+
+Implementation
+==============
+The primary challenges in implementing log-watch are these:
+
+1. Log files are rotated over time. That is, /var/log/syslog is normally
+   moved to /var/log/syslog.1 and a new log file is generated based on
+   /etc/logrotate.conf, so log-watch needs to determine when this occurs.
+2. We want to immediately know when data is written to the log file, so
+   we can't block waiting for a fixed buffer to be filled. In other words,
+   we need to use non-blocking reads from the stream.
+3. Most string matching algorithms aren't designed for streams, where a
+   line may be spread across multiple reads.
+
+The first challenge is addressed by using the inotify subsystem to watch
+for changes to the directory of the log file (normally /var/log) and also
+for the log file itself:
+
+	http://man7.org/linux/man-pages/man7/inotify.7.html
+
+The source module inotify-log.h/.c implement a convenient interface for
+receiving notifications of changed content or creation of a new file.
+
+It exposes two file descriptors of note:
+	1. "inot" is used in a poll() loop, and
+	2. "fdlog" is a file descriptor for the log file itself and
+	   is used inside a read callback
+
+Challenge #2 is addressed by inotify.c setting the O_NONBLOCK flag
+for the log file.
+
+Challenge #3 is addressed by module boyer-moore.h/.c, which implement a
+simple Boyer-Moore string search implementation that can match strings
+across two input buffers.
+
+Note that the string matching algorithm does impose a limit on the maximum
+size of the string that can be matched. In particular, it can only match
+strings smaller than the read buffer size, which defaults to 256 bytes.
+
+Tuning:
+=======
+The buffer size for each read defaults to 256 bytes, but can be changed
+defining LOGBUFSIZE during compilation:
+
+~/log-watch$ CFLAGS=-DLOGBUFSIZE=512 make msg-watch
