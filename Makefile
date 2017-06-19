@@ -9,7 +9,11 @@ inotify-log: inotify-log.c inotify-log.h
 log-watch: log-watch.c boyer-moore.c boyer-moore.h inotify-log.c inotify-log.h
 	${CC} ${CFLAGS} -o log-watch log-watch.c boyer-moore.c inotify-log.c -O3 -Wall
 
-.PHONY: clean
+.PHONY: clean install
 
 clean:
 	rm -f boyer-moore inotify-log log-watch *.o *.gcda *.gcno *.gcov
+
+install: all
+	mkdir -p ${DESTDIR}/usr/bin
+	cp -fv boyer-moore ${DESTDIR}/usr/bin
